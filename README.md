@@ -1,6 +1,6 @@
 # xZenith Hardware Monitor
 
-[![GitHub](https://img.shields.io/badge/GitHub-xZenithhardwareMonitor-blue?logo=github)](https://github.com/xFlawlessDev/xZenithhardwareMonitor)
+[![GitHub](https://img.shields.io/badge/GitHub-xZenithHardwareMonitor-blue?logo=github)](https://github.com/xFlawlessDev/xZenithhardwareMonitor)
 [![License](https://img.shields.io/badge/License-MIT%20%2F%20MPL--2.0-green)](LICENSE)
 
 A comprehensive hardware monitoring solution for Windows applications, designed for seamless integration with Tauri, Rust, C++, and other languages through a C-compatible API.
