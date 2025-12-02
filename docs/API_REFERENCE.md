@@ -6,7 +6,10 @@ Complete reference for the C-compatible API exported by `ManagedxZenithHardwareM
 
 - [Initialization](#initialization)
 - [Core Functions](#core-functions)
+- [WMI Event Functions](#wmi-event-functions)
+- [Key Status Functions](#key-status-functions)
 - [Data Structures](#data-structures)
+- [TypeScript Interfaces](#typescript-interfaces)
 - [Sensor Types](#sensor-types)
 - [Hardware Types](#hardware-types)
 - [Error Handling](#error-handling)
@@ -186,6 +189,87 @@ monitor = NULL;
 
 ---
 
+## WMI Event Functions
+
+Listen for system WMI events (IP3_WMIEvent). Only available on certain OEM devices.
+
+### Functions
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `StartWmiEventListener` | `bool (void*)` | Start listening. Returns `false` if unavailable |
+| `StopWmiEventListener` | `void (void*)` | Stop listening |
+| `PollWmiEvent` | `bool (void*, char*, int)` | Get next event. Returns `true` if event available |
+
+### Event Types
+
+| Type | Description |
+|------|-------------|
+| `WMI_TEST` | Listener started successfully |
+| `WMI_EVENT` | System event received |
+| `WMI_CLOSE` | Listener stopped |
+| `WMI_UNAVAILABLE` | Not supported on this device |
+
+### Event JSON Format
+
+```json
+{"type":"WMI_EVENT","data":[1,2,3],"message":"WMI Event received","details":"..."}
+```
+
+### Usage
+
+```c
+// Start listener
+bool success = StartWmiEventListener(monitor);
+if (!success) {
+    // WMI not available on this device
+}
+
+// Poll for events (call in loop, ~50ms interval)
+char buffer[4096];
+if (PollWmiEvent(monitor, buffer, sizeof(buffer))) {
+    // Process event JSON in buffer
+}
+
+// Stop when done
+StopWmiEventListener(monitor);
+```
+
+---
+
+## Key Status Functions
+
+Monitor CapsLock and NumLock keyboard status.
+
+### Functions
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `StartKeyMonitor` | `void (void*)` | Start monitoring (fires events on change) |
+| `StopKeyMonitor` | `void (void*)` | Stop monitoring |
+| `GetKeyStatus` | `void (void*, char*, int)` | Get current status (one-time check) |
+
+### Status JSON Format
+
+```json
+{"caps_lock":true,"num_lock":false,"timestamp":"2024-01-15T10:30:00Z"}
+```
+
+### Usage
+
+```c
+// One-time status check
+char buffer[256];
+GetKeyStatus(monitor, buffer, sizeof(buffer));
+
+// Or continuous monitoring (poll every ~100ms)
+StartKeyMonitor(monitor);
+// ... poll with GetKeyStatus() ...
+StopKeyMonitor(monitor);
+```
+
+---
+
 ## Data Structures
 
 ### JSON Output Format
@@ -229,6 +313,27 @@ monitor = NULL;
 | `Value` | float | Current sensor value |
 | `Min` | float | Minimum recorded value |
 | `Max` | float | Maximum recorded value |
+
+---
+
+## TypeScript Interfaces
+
+```typescript
+// WMI Event
+interface WmiEvent {
+    type: 'WMI_EVENT' | 'WMI_TEST' | 'WMI_CLOSE' | 'WMI_UNAVAILABLE';
+    data: number[] | null;
+    message: string;
+    details: string;
+}
+
+// Key Status
+interface KeyStatus {
+    caps_lock: boolean;
+    num_lock: boolean;
+    timestamp: string;  // ISO 8601
+}
+```
 
 ---
 

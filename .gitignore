@@ -238,3 +238,7 @@ venv/
 !.nuget/NuGet.Config
 !.nuget/NuGet.exe
 !.nuget/NuGet.targets
+
+
+# Ignore user-specific folders
+example
