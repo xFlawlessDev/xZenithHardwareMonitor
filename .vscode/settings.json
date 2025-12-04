@@ -1,3 +1,79 @@
 {
+  "nuxt.isNuxtApp": false,
+  // VSCord Configuration
+  "vscord.app.name": "Visual Studio Code",
+  "vscord.status.details.text.idle": "Idle",
+  "vscord.status.image.small.idle.text": "Idle",
+  "vscord.status.image.small.notInFile.text": "Idle",
+  "vscord.status.details.text.notInFile": "",
+  "vscord.status.state.text.notInFile": "",
+  "vscord.status.showElapsedTime": true,
+  "vscord.status.resetElapsedTimePerFile": false,
+  "vscord.status.problems.enabled": false,
+  "vscord.status.idle.enabled": true,
+  "vscord.status.idle.check": true,
+  "vscord.status.image.large.viewing.text": "{lang}",
+  "vscord.status.image.small.viewing.text": "{app_name}",
+  "vscord.status.details.text.viewing": "📁 {folder_and_file}",
+  "vscord.status.state.text.viewing": "📝 {current_column}:{current_line}/{line_count} ({file_size})",
+  "vscord.status.image.large.editing.text": "{lang}",
+  "vscord.status.image.small.editing.text": "{app_name}",
+  "vscord.status.details.text.editing": "📁 {folder_and_file}",
+  "vscord.status.state.text.editing": "📝 {current_column}:{current_line}/{line_count} ({file_size})",
+  "vscord.status.image.large.debugging.text": "{lang}",
+  "vscord.status.image.small.debugging.text": "{app_name}",
+  "vscord.status.details.text.debugging": "📁 {folder_and_file}",
+  "vscord.status.state.text.debugging": "📝 {current_column}:{current_line}/{line_count} ({file_size})",
+  "vscord.status.image.small.debugging.key": "{empty}",
+  "vscord.status.image.small.editing.key": "{empty}",
+  "vscord.status.image.small.idle.key": "{empty}",
+  "vscord.status.image.small.notInFile.key": "{empty}",
+  "vscord.status.image.small.viewing.key": "{empty}",
+  // TypeScript React Configuration
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  // fix css error tailwind
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  // General Editor Configuration
+  "editor.smoothScrolling": true,
+  "editor.cursorBlinking": "phase",
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": false,
+  "editor.inlineSuggest.fontFamily": "'Monaspace Krypton', monospace",
+  "editor.fontWeight": "250",
+  "editor.fontSize": 12.8,
+  "editor.fontLigatures": "'calt', 'liga', 'ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'ss06', 'ss07', 'ss08', 'ss09'",
+  "editor.renderWhitespace": "all",
+  "editor.minimap.renderCharacters": false,
+  "editor.guides.indentation": true,
+  // Terminal Configuration
+  "terminal.integrated.smoothScrolling": true,
+  "terminal.integrated.fontFamily": "'Monaspace Neon', monospace",
+  "terminal.integrated.fontSize": 12.8,
+  "terminal.integrated.fontWeight": 250,
+  "terminal.integrated.fontWeightBold": 500,
+  // Git Configuration
+  "git.autofetch": true,
+  // TypeScript and JavaScript Configuration
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  // Prettier Configuration
+  "prettier.documentSelectors": ["*/"],
+  "prettier.enableDebugLogs": true,
+  "prettier.endOfLine": "lf",
+  "prettier.printWidth": 120,
+  "prettier.requireConfig": true,
+  "prettier.semi": false,
+  "prettier.singleQuote": true,
+  // Theme and Icon Configuration
+  "workbench.colorTheme": "Owlet (Charcoal)",
+  "window.zoomLevel": 0.5,
+  "workbench.sideBar.location": "right",
+  "workbench.productIconTheme": "material-product-icons",
+  "workbench.iconTheme": "catppuccin-latte",
+  "workbench.editor.empty.hint": "hidden",
   "dotnet.preferCSharpExtension": true
 }
