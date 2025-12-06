@@ -747,19 +747,73 @@ Super I/O chip providing voltage, temperature, and fan monitoring. Common SuperI
 
 ### Storage
 
-HDD, SSD, and NVMe drive monitoring.
+HDD, SSD, and NVMe drive monitoring. Sensor availability varies by drive type and manufacturer.
 
 #### Available Sensors
 
 | Sensor Type | Sensor Names | Unit | Description |
 |-------------|--------------|------|-------------|
-| `Temperature` | `Temperature`, `Temperature 1`, `Temperature 2`, `Warning Temperature Time` | C | Drive temperatures |
-| `Load` | `Used Space`, `Write Activity`, `Total Activity` | % | Drive capacity and activity |
-| `Data` | `Data Read`, `Data Written`, `Total Bytes Read`, `Total Bytes Written`, `Host Reads`, `Host Writes` | GB | Lifetime data transferred |
+| `Temperature` | `Temperature`, `Temperature 1`-`Temperature N`, `Airflow Temperature` | °C | Drive temperature sensors (SMART or NVMe) |
+| `Load` | `Used Space`, `Read Activity`, `Write Activity`, `Total Activity` | % | Drive capacity usage and I/O activity |
 | `Throughput` | `Read Rate`, `Write Rate` | B/s | Current transfer speeds |
-| `Level` | `Remaining Life`, `Available Spare`, `Available Spare Threshold`, `Percentage Used` | % | Drive health indicators |
-| `Factor` | `Media Errors`, `Error Info Log Entry Count`, `Unsafe Shutdowns`, `Power Cycle Count`, `Spare Remaining` | 1 | Error and power cycle counts |
-| `TimeSpan` | `Power-On Hours (POH)` | s | Total power-on time |
+| `Data` | `Data Read`, `Data Written`, `Total Bytes Written`, `Host Reads`, `Host Writes`, `Host Writes to Controller`, `Controller Writes to NAND`, `Host Read Commands`, `Host Write Commands` | GB or millions | Lifetime data transferred or command counts |
+| `Level` | `Remaining Life`, `Available Spare`, `Available Spare Threshold`, `Percentage Used` | % | Drive health and wear indicators |
+| `Factor` | `Write Amplification` | 1 | SSD write efficiency (Controller Writes / Host Writes) |
+| `SmallData` | `Power Cycles`, `Unsafe Shutdowns`, `Media Errors`, `Error Info Log Entries` | count | Reliability and lifecycle counters |
+| `TimeSpan` | `Power On Hours`, `Controller Busy Time`, `Warning Temperature Time`, `Critical Temperature Time` | s | Time-based metrics |
+
+**Common SMART Attributes** (varies by drive model):
+- Temperature sensors from attributes 0xC2, 0xE7, 0xBE, 0x194
+- Power-On Hours (attribute 0x09) - displayed as raw value, not as sensor
+- Start/Stop Count, Power Cycle Count
+- Reallocated Sectors Count, Program/Erase Fail Counts
+- Uncorrectable Error Count, CRC Error Count
+
+**NVMe-Specific Sensors**:
+- **Health Indicators**:
+  - Available Spare / Available Spare Threshold (Level) - Remaining reserve capacity
+  - Percentage Used (Level) - Wear indicator (0% = new, 100% = worn out)
+  - Data Units Read/Written (Data) - Converted to GB: units × 512 / 1,000,000
+
+- **Power & Lifecycle Metrics**:
+  - Power Cycles (SmallData) - Total number of power-on events
+  - Power On Hours (TimeSpan) - Cumulative operating time in seconds
+  - Unsafe Shutdowns (SmallData) - Count of improper shutdowns (critical for reliability)
+
+- **Error & Reliability Tracking**:
+  - Media Errors (SmallData) - Unrecovered data integrity errors
+  - Error Info Log Entries (SmallData) - Total entries in error log
+
+- **I/O Activity Metrics**:
+  - Host Read Commands (Data) - Total read operations in millions
+  - Host Write Commands (Data) - Total write operations in millions
+  - Controller Busy Time (TimeSpan) - Time spent processing I/O (minutes → seconds)
+
+- **Temperature History** (if supported):
+  - Warning Temperature Time (TimeSpan) - Cumulative time above warning threshold
+  - Critical Temperature Time (TimeSpan) - Cumulative time above critical threshold
+  - Multiple temperature sensors (composite + sensor 1-N)
+
+**SSD-Specific Sensors** (vendor-dependent):
+- **Remaining Life** (Level, SensorType.Level, Index 0):
+  - **Intel SSD**: SMART attribute 0xE8 (direct value, 0-100%)
+  - **Sandforce SSD**: SMART attribute 0xE7 (direct value, 0-100%)
+  - **Samsung SSD**: SMART attribute 0xB4 - "Unused Reserved Block Count (Total)" (direct value, 0-100%)
+  - **Micron SSD**: SMART attribute 0xCA - calculated as `100 - raw_value` (inverted scale)
+  - **Indilinx SSD**: SMART attribute 0xD1 (direct value, 0-100%)
+  - Represents percentage of drive life remaining before wear-out
+  
+- **Host Reads/Writes** (Data, GB):
+  - Intel: 0xE1, 0xF1 (Host Writes), 0xF2 (Host Reads) - converted by `/0x20`
+  - Sandforce: 0xF1 (Host Writes), 0xF2 (Host Reads) - raw value
+  - Samsung: 0xF1 (Total LBAs Written) - complex 6-byte conversion to GB
+  - Plextor: 0xF1 (Host Writes), 0xF2 (Host Reads) - converted by `/32`
+  - Micron: 0xF6 (Total LBAs Written) - 6-byte conversion to GB
+  
+- **Write Amplification** (Factor):
+  - Sandforce: Calculated as `Controller Writes (0xE9) / Host Writes (0xEA)`
+  - Micron: Calculated as `(Host Pages (0xF7) + FTL Pages (0xF8)) / Host Pages`
+  - Represents SSD write efficiency (lower is better, ideal ~1.0)
 
 #### JSON Example
 
@@ -782,7 +836,47 @@ HDD, SSD, and NVMe drive monitoring.
       "Index": 0,
       "Value": 65.5,
       "Min": 10.0,
-      "Max": 65.5
+      "Max": 95.2
+    },
+    {
+      "SensorType": "Load",
+      "Name": "Read Activity",
+      "Index": 31,
+      "Value": 12.5,
+      "Min": 0.0,
+      "Max": 100.0
+    },
+    {
+      "SensorType": "Load",
+      "Name": "Write Activity",
+      "Index": 32,
+      "Value": 8.2,
+      "Min": 0.0,
+      "Max": 100.0
+    },
+    {
+      "SensorType": "Load",
+      "Name": "Total Activity",
+      "Index": 33,
+      "Value": 20.7,
+      "Min": 0.0,
+      "Max": 100.0
+    },
+    {
+      "SensorType": "Throughput",
+      "Name": "Read Rate",
+      "Index": 34,
+      "Value": 524288000.0,
+      "Min": 0.0,
+      "Max": 7000000000.0
+    },
+    {
+      "SensorType": "Throughput",
+      "Name": "Write Rate",
+      "Index": 35,
+      "Value": 104857600.0,
+      "Min": 0.0,
+      "Max": 5000000000.0
     },
     {
       "SensorType": "Level",
@@ -793,6 +887,22 @@ HDD, SSD, and NVMe drive monitoring.
       "Max": 100.0
     },
     {
+      "SensorType": "Level",
+      "Name": "Available Spare",
+      "Index": 1,
+      "Value": 100.0,
+      "Min": 100.0,
+      "Max": 100.0
+    },
+    {
+      "SensorType": "Level",
+      "Name": "Percentage Used",
+      "Index": 3,
+      "Value": 2.0,
+      "Min": 0.0,
+      "Max": 2.0
+    },
+    {
       "SensorType": "Data",
       "Name": "Total Bytes Written",
       "Index": 0,
@@ -801,12 +911,84 @@ HDD, SSD, and NVMe drive monitoring.
       "Max": 15420.5
     },
     {
-      "SensorType": "Throughput",
-      "Name": "Read Rate",
-      "Index": 0,
-      "Value": 524288000.0,
+      "SensorType": "Data",
+      "Name": "Host Writes",
+      "Index": 1,
+      "Value": 8256.3,
       "Min": 0.0,
-      "Max": 7000000000.0
+      "Max": 8256.3
+    },
+    {
+      "SensorType": "Data",
+      "Name": "Host Reads",
+      "Index": 2,
+      "Value": 12840.7,
+      "Min": 0.0,
+      "Max": 12840.7
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "Power Cycles",
+      "Index": 6,
+      "Value": 1247.0,
+      "Min": 0.0,
+      "Max": 1247.0
+    },
+    {
+      "SensorType": "TimeSpan",
+      "Name": "Power On Hours",
+      "Index": 7,
+      "Value": 5832000.0,
+      "Min": 0.0,
+      "Max": 5832000.0
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "Unsafe Shutdowns",
+      "Index": 8,
+      "Value": 12.0,
+      "Min": 0.0,
+      "Max": 12.0
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "Media Errors",
+      "Index": 9,
+      "Value": 0.0,
+      "Min": 0.0,
+      "Max": 0.0
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "Error Info Log Entries",
+      "Index": 10,
+      "Value": 3.0,
+      "Min": 0.0,
+      "Max": 3.0
+    },
+    {
+      "SensorType": "Data",
+      "Name": "Host Read Commands",
+      "Index": 11,
+      "Value": 254.8,
+      "Min": 0.0,
+      "Max": 254.8
+    },
+    {
+      "SensorType": "Data",
+      "Name": "Host Write Commands",
+      "Index": 12,
+      "Value": 187.3,
+      "Min": 0.0,
+      "Max": 187.3
+    },
+    {
+      "SensorType": "TimeSpan",
+      "Name": "Controller Busy Time",
+      "Index": 13,
+      "Value": 45600.0,
+      "Min": 0.0,
+      "Max": 45600.0
     }
   ],
   "SubHardware": []

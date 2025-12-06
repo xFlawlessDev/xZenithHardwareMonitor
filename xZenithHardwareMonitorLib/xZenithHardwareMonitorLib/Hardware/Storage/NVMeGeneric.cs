@@ -46,14 +46,41 @@ public sealed class NVMeGeneric : AbstractStorage
         NVMeHealthInfo log = Smart.GetHealthInfo();
         if (log != null)
         {
+            // Temperature sensors
             AddSensor("Temperature", 0, false, SensorType.Temperature, health => health.Temperature);
+
+            // Health and wear indicators
             AddSensor("Available Spare", 1, false, SensorType.Level, health => health.AvailableSpare);
             AddSensor("Available Spare Threshold", 2, false, SensorType.Level, health => health.AvailableSpareThreshold);
             AddSensor("Percentage Used", 3, false, SensorType.Level, health => health.PercentageUsed);
+
+            // Data transfer metrics
             AddSensor("Data Read", 4, false, SensorType.Data, health => UnitsToData(health.DataUnitRead));
             AddSensor("Data Written", 5, false, SensorType.Data, health => UnitsToData(health.DataUnitWritten));
 
-            int sensorIdx = 6;
+            // Power and lifecycle metrics (Phase 1 - Critical)
+            AddSensor("Power Cycles", 6, false, SensorType.SmallData, health => health.PowerCycle);
+            AddSensor("Power On Hours", 7, false, SensorType.TimeSpan, health => health.PowerOnHours * 3600); // Convert hours to seconds
+            AddSensor("Unsafe Shutdowns", 8, false, SensorType.SmallData, health => health.UnsafeShutdowns);
+
+            // Error and reliability metrics (Phase 1 - Critical)
+            AddSensor("Media Errors", 9, false, SensorType.SmallData, health => health.MediaErrors);
+            AddSensor("Error Info Log Entries", 10, false, SensorType.SmallData, health => health.ErrorInfoLogEntryCount);
+
+            // I/O activity metrics (Phase 2 - Medium priority)
+            AddSensor("Host Read Commands", 11, false, SensorType.Data, health => health.HostReadCommands / 1000000f); // Convert to millions
+            AddSensor("Host Write Commands", 12, false, SensorType.Data, health => health.HostWriteCommands / 1000000f); // Convert to millions
+            AddSensor("Controller Busy Time", 13, false, SensorType.TimeSpan, health => health.ControllerBusyTime * 60); // Convert minutes to seconds
+
+            // Temperature warning metrics (Phase 3 - Medium priority)
+            if (log.WarningCompositeTemperatureTime > 0)
+                AddSensor("Warning Temperature Time", 14, false, SensorType.TimeSpan, health => health.WarningCompositeTemperatureTime * 60); // Convert minutes to seconds
+
+            if (log.CriticalCompositeTemperatureTime > 0)
+                AddSensor("Critical Temperature Time", 15, false, SensorType.TimeSpan, health => health.CriticalCompositeTemperatureTime * 60); // Convert minutes to seconds
+
+            // Additional temperature sensors (variable indices starting from 16)
+            int sensorIdx = 16;
             for (int i = 0; i < log.TemperatureSensors.Length; i++)
             {
                 int idx = i;
