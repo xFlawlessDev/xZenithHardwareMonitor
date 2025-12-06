@@ -56,11 +56,11 @@ The CPU hardware type provides comprehensive processor monitoring for Intel and 
 
 | Sensor Type | Sensor Names | Unit | Description |
 |-------------|--------------|------|-------------|
-| `Temperature` | `CPU Package`, `CPU Core #1` - `#N`, `Core (Tctl/Tdie)`, `CCD1 (Tdie)`, `CCD2 (Tdie)`, `CPU Core Distance to TjMax #1` - `#N` | C | Core and package temperatures |
+| `Temperature` | **Intel**: `CPU Package`, `CPU Core #1` - `#N`, `Core Max`, `Core Average`, `CPU Core #1 Distance to TjMax` - `#N Distance to TjMax`<br>**AMD**: `Core (Tctl)`, `Core (Tdie)`, `Core (Tctl/Tdie)`, `CCD1 (Tdie)` - `CCD8 (Tdie)`, `CCDs Max (Tdie)`, `CCDs Average (Tdie)` | C | Core and package temperatures |
 | `Load` | `CPU Total`, `CPU Core #1` - `#N`, `CPU Core Max`, `CPU Core #1 Thread #1`, `CPU Core #1 Thread #2` | % | Utilization per core/thread and total |
 | `Clock` | `CPU Core #1` - `#N`, `Bus Speed` | MHz | Operating frequencies |
-| `Power` | `CPU Package`, `CPU Cores`, `CPU Memory`, `CPU Graphics`, `CPU DRAM`, `CPU SoC` | W | Power consumption |
-| `Voltage` | `CPU Core`, `CPU Core #1 VID` - `#N VID`, `CPU SoC` | V | Core voltages |
+| `Power` | **Intel**: `CPU Package`, `CPU Cores`, `CPU Graphics`, `CPU Memory`, `CPU Platform`<br>**AMD**: `Package` (plus SMU sensors if available) | W | Power consumption |
+| `Voltage` | **Intel**: `CPU Core`, `CPU Core #1` - `#N` (VID readings)<br>**AMD**: `Core (SVI2 TFN)`, `SoC (SVI2 TFN)` (plus SMU sensors if available) | V | Core voltages |
 
 #### JSON Example
 
@@ -78,6 +78,22 @@ The CPU hardware type provides comprehensive processor monitoring for Intel and 
       "Max": 78.5
     },
     {
+      "SensorType": "Temperature",
+      "Name": "CCD1 (Tdie)",
+      "Index": 1,
+      "Value": 48.0,
+      "Min": 34.0,
+      "Max": 82.0
+    },
+    {
+      "SensorType": "Temperature",
+      "Name": "CCDs Average (Tdie)",
+      "Index": 3,
+      "Value": 46.5,
+      "Min": 33.0,
+      "Max": 80.0
+    },
+    {
       "SensorType": "Load",
       "Name": "CPU Total",
       "Index": 0,
@@ -86,12 +102,36 @@ The CPU hardware type provides comprehensive processor monitoring for Intel and 
       "Max": 100.0
     },
     {
+      "SensorType": "Load",
+      "Name": "CPU Core Max",
+      "Index": 1,
+      "Value": 42.5,
+      "Min": 1.0,
+      "Max": 100.0
+    },
+    {
+      "SensorType": "Load",
+      "Name": "CPU Core #1",
+      "Index": 2,
+      "Value": 12.5,
+      "Min": 0.0,
+      "Max": 100.0
+    },
+    {
       "SensorType": "Clock",
-      "Name": "Core #1",
-      "Index": 0,
+      "Name": "CPU Core #1",
+      "Index": 1,
       "Value": 4200.5,
       "Min": 2200.0,
       "Max": 4950.0
+    },
+    {
+      "SensorType": "Clock",
+      "Name": "Bus Speed",
+      "Index": 0,
+      "Value": 100.0,
+      "Min": 100.0,
+      "Max": 100.0
     },
     {
       "SensorType": "Power",
@@ -100,6 +140,22 @@ The CPU hardware type provides comprehensive processor monitoring for Intel and 
       "Value": 65.3,
       "Min": 10.5,
       "Max": 142.0
+    },
+    {
+      "SensorType": "Voltage",
+      "Name": "Core (SVI2 TFN)",
+      "Index": 0,
+      "Value": 1.325,
+      "Min": 0.200,
+      "Max": 1.550
+    },
+    {
+      "SensorType": "Voltage",
+      "Name": "SoC (SVI2 TFN)",
+      "Index": 1,
+      "Value": 1.100,
+      "Min": 0.900,
+      "Max": 1.200
     }
   ],
   "SubHardware": []
@@ -139,9 +195,12 @@ impl CpuData {
             return None;
         }
 
+        // Try to find package temperature (Intel) or Tctl/Tdie (AMD)
         let temperature = hw.sensors.iter()
             .find(|s| s.sensor_type == "Temperature" && 
-                (s.name.contains("Package") || s.name.contains("Tctl") || s.name.contains("Tdie")))
+                (s.name.contains("Package") || 
+                 s.name.contains("Tctl") || 
+                 s.name.contains("Tdie")))
             .map(|s| s.value);
 
         let total_load = hw.sensors.iter()
@@ -164,8 +223,9 @@ impl CpuData {
             })
             .collect();
 
+        // Try to find Package power sensor (both Intel and AMD use this name)
         let power = hw.sensors.iter()
-            .find(|s| s.sensor_type == "Power" && s.name == "CPU Package")
+            .find(|s| s.sensor_type == "Power" && s.name.contains("Package"))
             .map(|s| s.value);
 
         Some(CpuData {
@@ -190,16 +250,16 @@ NVIDIA graphics cards provide extensive monitoring through NVML/NVAPI.
 
 | Sensor Type | Sensor Names | Unit | Description |
 |-------------|--------------|------|-------------|
-| `Temperature` | `GPU Core`, `GPU Hot Spot`, `GPU Memory Junction` | C | GPU temperatures |
-| `Load` | `GPU Core`, `GPU Memory Controller`, `GPU Video Engine`, `GPU Bus`, `GPU Memory`, `D3D 3D`, `D3D Copy`, `D3D Video Decode`, `D3D Video Encode`, `D3D Cuda` | % | Utilization metrics |
+| `Temperature` | `GPU Core`, `GPU Memory`, `GPU Hot Spot`, `GPU Memory Junction`, `GPU Power Supply`, `GPU Board`, `GPU Visual Computing Board`, `GPU Visual Computing Inlet`, `GPU Visual Computing Outlet` | C | GPU temperatures |
+| `Load` | `GPU Core`, `GPU Memory Controller`, `GPU Memory`, `GPU Video Engine`, `GPU Bus`, `D3D 3D`, `D3D Copy`, `D3D Video Decode`, `D3D Video Encode`, `D3D Cuda`, `GPU Power`*, `GPU Board Power`* | % | Utilization metrics |
 | `Clock` | `GPU Core`, `GPU Memory`, `GPU Shader`, `GPU Video` | MHz | Clock speeds |
-| `Power` | `GPU Power`, `GPU Board Power`, `GPU TDP` | W | Power consumption |
+| `Power` | `GPU Package` | W | Power consumption via NVML |
 | `Fan` | `GPU Fan`, `GPU Fan #1`, `GPU Fan #2` | RPM | Fan speeds |
 | `Control` | `GPU Fan`, `GPU Fan #1`, `GPU Fan #2` | % | Fan control level |
 | `SmallData` | `GPU Memory Used`, `GPU Memory Free`, `GPU Memory Total`, `D3D Dedicated Memory Used`, `D3D Shared Memory Used` | MB | VRAM usage |
 | `Throughput` | `GPU PCIe Rx`, `GPU PCIe Tx` | B/s | PCIe bandwidth |
-| `Voltage` | `GPU Core` | V | Core voltage |
-| `Factor` | `GPU Performance Limit - Power`, `GPU Performance Limit - Thermal`, `GPU Performance Limit - Voltage`, `GPU Performance Limit - Utilization` | 1 | Performance limiters |
+
+**Note**: `GPU Power` and `GPU Board Power` are incorrectly reported as `Load` type (bug in implementation line 303), but represent power consumption in watts. Use `GPU Package` (Power type) for accurate power readings via NVML.
 
 #### JSON Example
 
@@ -217,10 +277,42 @@ NVIDIA graphics cards provide extensive monitoring through NVML/NVAPI.
       "Max": 83.0
     },
     {
+      "SensorType": "Temperature",
+      "Name": "GPU Hot Spot",
+      "Index": 1,
+      "Value": 68.0,
+      "Min": 42.0,
+      "Max": 95.0
+    },
+    {
+      "SensorType": "Temperature",
+      "Name": "GPU Memory Junction",
+      "Index": 2,
+      "Value": 64.0,
+      "Min": 38.0,
+      "Max": 88.0
+    },
+    {
       "SensorType": "Load",
       "Name": "GPU Core",
       "Index": 0,
       "Value": 45.0,
+      "Min": 0.0,
+      "Max": 100.0
+    },
+    {
+      "SensorType": "Load",
+      "Name": "GPU Memory Controller",
+      "Index": 1,
+      "Value": 12.0,
+      "Min": 0.0,
+      "Max": 100.0
+    },
+    {
+      "SensorType": "Load",
+      "Name": "GPU Memory",
+      "Index": 3,
+      "Value": 25.6,
       "Min": 0.0,
       "Max": 100.0
     },
@@ -233,12 +325,36 @@ NVIDIA graphics cards provide extensive monitoring through NVML/NVAPI.
       "Max": 2850.0
     },
     {
+      "SensorType": "Clock",
+      "Name": "GPU Memory",
+      "Index": 1,
+      "Value": 11400.0,
+      "Min": 810.0,
+      "Max": 11400.0
+    },
+    {
       "SensorType": "SmallData",
       "Name": "GPU Memory Used",
-      "Index": 0,
+      "Index": 1,
       "Value": 4096.0,
       "Min": 512.0,
       "Max": 15360.0
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "GPU Memory Free",
+      "Index": 0,
+      "Value": 12288.0,
+      "Min": 512.0,
+      "Max": 15872.0
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "GPU Memory Total",
+      "Index": 2,
+      "Value": 16384.0,
+      "Min": 16384.0,
+      "Max": 16384.0
     },
     {
       "SensorType": "Fan",
@@ -249,12 +365,36 @@ NVIDIA graphics cards provide extensive monitoring through NVML/NVAPI.
       "Max": 2400.0
     },
     {
+      "SensorType": "Control",
+      "Name": "GPU Fan",
+      "Index": 0,
+      "Value": 45.0,
+      "Min": 0.0,
+      "Max": 100.0
+    },
+    {
       "SensorType": "Power",
-      "Name": "GPU Power",
+      "Name": "GPU Package",
       "Index": 0,
       "Value": 185.5,
       "Min": 15.0,
       "Max": 320.0
+    },
+    {
+      "SensorType": "Throughput",
+      "Name": "GPU PCIe Rx",
+      "Index": 0,
+      "Value": 104857600.0,
+      "Min": 0.0,
+      "Max": 2000000000.0
+    },
+    {
+      "SensorType": "Throughput",
+      "Name": "GPU PCIe Tx",
+      "Index": 1,
+      "Value": 52428800.0,
+      "Min": 0.0,
+      "Max": 2000000000.0
     }
   ],
   "SubHardware": []
@@ -271,14 +411,15 @@ AMD graphics cards monitoring through ADL/ADLX.
 
 | Sensor Type | Sensor Names | Unit | Description |
 |-------------|--------------|------|-------------|
-| `Temperature` | `GPU Core`, `GPU Hot Spot`, `GPU Memory`, `GPU VR SoC`, `GPU VR Mem`, `GPU Liquid`, `GPU PLX` | C | Various temperature points |
-| `Load` | `GPU Core`, `GPU Memory Controller`, `D3D 3D`, `D3D Copy`, `D3D Video Decode`, `D3D Video Encode` | % | Utilization |
+| `Temperature` | `GPU Core`, `GPU Hot Spot`, `GPU Memory`, `GPU VR SoC`, `GPU VR VDDC`, `GPU VR MVDD`, `GPU Liquid`, `GPU PLX` | C | Various temperature points |
+| `Load` | `GPU Core`, `GPU Memory Controller`, `GPU Memory`, `D3D 3D`, `D3D Copy`, `D3D Video Decode`, `D3D Video Encode` | % | Utilization |
 | `Clock` | `GPU Core`, `GPU Memory`, `GPU SoC` | MHz | Clock speeds |
-| `Power` | `GPU Power`, `GPU SoC`, `GPU TDP`, `GPU PPT` | W | Power consumption |
+| `Power` | `GPU Core`, `GPU SoC`, `GPU PPT`, `GPU Package` | W | Power consumption |
 | `Fan` | `GPU Fan`, `GPU Fan #1`, `GPU Fan #2` | RPM | Fan speed |
 | `Control` | `GPU Fan`, `GPU Fan #1`, `GPU Fan #2` | % | Fan control percentage |
 | `Voltage` | `GPU Core`, `GPU SoC`, `GPU Memory` | V | Voltages |
-| `SmallData` | `GPU Memory Used`, `GPU Memory Free`, `GPU Memory Total`, `D3D Dedicated Memory Used`, `D3D Shared Memory Used` | MB | VRAM usage |
+| `SmallData` | `GPU Memory Used`, `GPU Memory Free`, `GPU Memory Total`, `D3D Dedicated Memory Used`, `D3D Dedicated Memory Free`, `D3D Dedicated Memory Total`, `D3D Shared Memory Used`, `D3D Shared Memory Free`, `D3D Shared Memory Total` | MB | VRAM usage |
+| `Factor` | `Fullscreen FPS` | 1 | Frames per second in fullscreen applications |
 
 #### JSON Example
 
@@ -298,10 +439,26 @@ AMD graphics cards monitoring through ADL/ADLX.
     {
       "SensorType": "Temperature",
       "Name": "GPU Hot Spot",
-      "Index": 1,
+      "Index": 7,
       "Value": 72.0,
       "Min": 45.0,
       "Max": 98.0
+    },
+    {
+      "SensorType": "Load",
+      "Name": "GPU Core",
+      "Index": 0,
+      "Value": 56.0,
+      "Min": 0.0,
+      "Max": 100.0
+    },
+    {
+      "SensorType": "Load",
+      "Name": "GPU Memory",
+      "Index": 1,
+      "Value": 35.0,
+      "Min": 0.0,
+      "Max": 100.0
     },
     {
       "SensorType": "Clock",
@@ -312,12 +469,68 @@ AMD graphics cards monitoring through ADL/ADLX.
       "Max": 2700.0
     },
     {
-      "SensorType": "Power",
-      "Name": "GPU Power",
+      "SensorType": "Clock",
+      "Name": "GPU Memory",
+      "Index": 2,
+      "Value": 2500.0,
+      "Min": 96.0,
+      "Max": 2500.0
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "GPU Memory Used",
       "Index": 0,
+      "Value": 8192.0,
+      "Min": 256.0,
+      "Max": 23552.0
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "GPU Memory Free",
+      "Index": 1,
+      "Value": 16192.0,
+      "Min": 832.0,
+      "Max": 24128.0
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "GPU Memory Total",
+      "Index": 2,
+      "Value": 24576.0,
+      "Min": 24576.0,
+      "Max": 24576.0
+    },
+    {
+      "SensorType": "Fan",
+      "Name": "GPU Fan",
+      "Index": 0,
+      "Value": 1450.0,
+      "Min": 0.0,
+      "Max": 3200.0
+    },
+    {
+      "SensorType": "Control",
+      "Name": "GPU Fan",
+      "Index": 0,
+      "Value": 42.0,
+      "Min": 0.0,
+      "Max": 100.0
+    },
+    {
+      "SensorType": "Power",
+      "Name": "GPU Package",
+      "Index": 3,
       "Value": 295.0,
       "Min": 20.0,
       "Max": 355.0
+    },
+    {
+      "SensorType": "Voltage",
+      "Name": "GPU Core",
+      "Index": 0,
+      "Value": 1.075,
+      "Min": 0.550,
+      "Max": 1.200
     }
   ],
   "SubHardware": []
@@ -338,7 +551,7 @@ Intel integrated and discrete graphics monitoring.
 | `Load` | `GPU Core`, `D3D 3D`, `D3D Copy`, `D3D Video Decode`, `D3D Video Encode` | % | Utilization |
 | `Clock` | `GPU Core` | MHz | Operating frequency |
 | `Power` | `GPU Power`, `GPU Package` | W | Power consumption |
-| `SmallData` | `D3D Dedicated Memory Used`, `D3D Shared Memory Used` | MB | Memory usage |
+| `SmallData` | `D3D Dedicated Memory Used`, `D3D Shared Memory Used`, `D3D Shared Memory Free`, `D3D Shared Memory Total` | MB | Memory usage |
 
 #### JSON Example
 
@@ -348,12 +561,36 @@ Intel integrated and discrete graphics monitoring.
   "Name": "Intel UHD Graphics 770",
   "Sensors": [
     {
-      "SensorType": "Temperature",
-      "Name": "GPU Core",
+      "SensorType": "SmallData",
+      "Name": "D3D Dedicated Memory Used",
       "Index": 0,
-      "Value": 45.0,
-      "Min": 35.0,
-      "Max": 72.0
+      "Value": 128.0,
+      "Min": 0.0,
+      "Max": 256.0
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "D3D Shared Memory Used",
+      "Index": 1,
+      "Value": 512.0,
+      "Min": 0.0,
+      "Max": 8192.0
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "D3D Shared Memory Free",
+      "Index": 2,
+      "Value": 7680.0,
+      "Min": 0.0,
+      "Max": 8192.0
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "D3D Shared Memory Total",
+      "Index": 3,
+      "Value": 8192.0,
+      "Min": 8192.0,
+      "Max": 8192.0
     },
     {
       "SensorType": "Load",
@@ -362,6 +599,22 @@ Intel integrated and discrete graphics monitoring.
       "Value": 12.5,
       "Min": 0.0,
       "Max": 95.0
+    },
+    {
+      "SensorType": "Load",
+      "Name": "D3D Copy",
+      "Index": 1,
+      "Value": 2.5,
+      "Min": 0.0,
+      "Max": 45.0
+    },
+    {
+      "SensorType": "Power",
+      "Name": "GPU Power",
+      "Index": 0,
+      "Value": 8.5,
+      "Min": 2.0,
+      "Max": 15.0
     }
   ],
   "SubHardware": []
@@ -893,10 +1146,12 @@ impl GpuData {
             core_temperature: hw.find_sensor("Temperature", "GPU Core"),
             hot_spot_temperature: hw.find_sensor("Temperature", "GPU Hot Spot"),
             core_load: hw.find_sensor("Load", "GPU Core"),
-            memory_load: hw.find_sensor("Load", "GPU Memory Controller"),
+            memory_load: hw.find_sensor("Load", "GPU Memory Controller")
+                .or_else(|| hw.find_sensor("Load", "GPU Memory")),
             core_clock: hw.find_sensor("Clock", "GPU Core"),
             memory_clock: hw.find_sensor("Clock", "GPU Memory"),
-            power: hw.find_sensor("Power", "GPU Power"),
+            power: hw.find_sensor("Power", "GPU Package")
+                .or_else(|| hw.find_sensor("Power", "GPU Power")),
             fan_rpm: hw.find_sensor("Fan", "GPU Fan"),
             fan_percent: hw.find_sensor("Control", "GPU Fan"),
             memory_used_mb: hw.find_sensor("SmallData", "GPU Memory Used"),
