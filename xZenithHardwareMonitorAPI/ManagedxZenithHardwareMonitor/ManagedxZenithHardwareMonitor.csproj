@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="LibreHardwareMonitorLib">
+      <HintPath>..\..\LibreHardwareMonitorLib\bin\Release\x86\netstandard2.0\LibreHardwareMonitorLib.dll</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
@@ -59,9 +62,6 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
-    <Reference Include="xZenithHardwareMonitorLib">
-      <HintPath>..\..\xZenithHardwareMonitorLib\bin\Release\net472\xZenithHardwareMonitorLib.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HardwareMonitor.cs" />
