@@ -29,8 +29,11 @@ Before using any API functions, ensure:
 ```
 ManagedxZenithHardwareMonitorWrapper.dll  (C API)
 ManagedxZenithHardwareMonitor.dll         (Managed layer)
-xZenithHardwareMonitorLib.dll             (Core library)
+LibreHardwareMonitorLib.dll               (Core library)
 Newtonsoft.Json.dll                       (JSON serialization)
+DiskInfoToolkit.dll                       (Storage monitoring)
+HidSharp.dll                              (USB/HID device access)
+RAMSPDToolkit-NDD.dll                     (RAM SPD info)
 ```
 
 ---
@@ -357,6 +360,7 @@ interface KeyStatus {
 | `SmallData` | MB | Small data amounts |
 | `Throughput` | B/s | Transfer rates |
 | `TimeSpan` | s | Time durations |
+| `Timing` | ns | Memory timings (SPD data) |
 | `Energy` | mWh | Energy consumption |
 | `Noise` | dBA | Noise levels |
 

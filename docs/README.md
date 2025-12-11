@@ -20,8 +20,8 @@ Welcome to the xZenith Hardware Monitor documentation.
   - [API README](../xZenithHardwareMonitorAPI/README.md) - Wrapper API documentation
   - [API Reference](./API_REFERENCE.md) - Detailed function reference
 
-- **xZenithHardwareMonitorLib**
-  - [Library README](../xZenithHardwareMonitorLib/README.md) - Core library documentation
+- **LibreHardwareMonitorLib**
+  - [Library README](../LibreHardwareMonitorLib/README.md) - Core library documentation
 
 ### By Language
 
@@ -53,4 +53,4 @@ Welcome to the xZenith Hardware Monitor documentation.
 ## License
 
 - xZenithHardwareMonitorAPI: MIT License
-- xZenithHardwareMonitorLib: Mozilla Public License 2.0
+- LibreHardwareMonitorLib: Mozilla Public License 2.0

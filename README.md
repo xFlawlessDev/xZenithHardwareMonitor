@@ -11,7 +11,7 @@ xZenith Hardware Monitor is a two-component system that provides real-time hardw
 
 | Component                     | Description                                                     | Technology |
 | ----------------------------- | --------------------------------------------------------------- | ---------- |
-| **xZenithHardwareMonitorLib** | Core hardware monitoring library (fork of LibreHardwareMonitor) | C# / .NET  |
+| **LibreHardwareMonitorLib**   | Core hardware monitoring library (enhanced fork of LibreHardwareMonitor) | C# / .NET  |
 | **xZenithHardwareMonitorAPI** | C-compatible DLL wrapper for FFI integration                    | C++/CLI    |
 
 ## Architecture
@@ -38,10 +38,10 @@ xZenith Hardware Monitor is a two-component system that provides real-time hardw
 └─────────────────────────────┬───────────────────────────────────────┘
                               │
 ┌─────────────────────────────▼───────────────────────────────────────┐
-│                   xZenithHardwareMonitorLib                          │
+│                   LibreHardwareMonitorLib                            │
 │  - Low-level hardware access via kernel drivers                     │
 │  - Sensor drivers for CPU, GPU, Memory, Storage, etc.              │
-│  - Based on LibreHardwareMonitor                                    │
+│  - Enhanced fork with DiskInfoToolkit, RAMSPDToolkit integration    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -49,13 +49,14 @@ xZenith Hardware Monitor is a two-component system that provides real-time hardw
 
 | Category        | Supported Devices                                       |
 | --------------- | ------------------------------------------------------- |
-| **CPU**         | Intel, AMD processors (temperature, load, clock, power) |
-| **GPU**         | NVIDIA, AMD, Intel graphics cards                       |
-| **Memory**      | System RAM (usage, available, load)                     |
+| **CPU**         | Intel, AMD processors (temperature, load, clock, power, VID, C-states) |
+| **GPU**         | NVIDIA, AMD, Intel (including Arc discrete GPUs)        |
+| **Memory**      | System RAM + DIMM SPD data (DDR4/DDR5 timing parameters) |
 | **Motherboard** | Various manufacturers (voltages, temperatures, fans)    |
-| **Storage**     | HDD, SSD, NVMe drives (temperature, health, throughput) |
+| **Storage**     | HDD, SSD, NVMe drives (CrystalDiskInfo-level monitoring) |
 | **Network**     | Network adapters (throughput, bandwidth)                |
 | **Battery**     | Laptop batteries (charge, health, voltage)              |
+| **EC**          | Embedded Controllers (ASUS motherboards, ChromeOS)      |
 
 ## Sensor Types
 
@@ -68,7 +69,14 @@ xZenith Hardware Monitor is a two-component system that provides real-time hardw
 | `Fan`         | RPM        | Fan speeds             |
 | `Power`       | Watts      | Power consumption      |
 | `Data`        | GB         | Data amounts           |
+| `SmallData`   | MB         | Small data amounts     |
 | `Throughput`  | MB/s       | Transfer rates         |
+| `TimeSpan`    | Seconds    | Time durations         |
+| `Timing`      | ns         | Timing parameters      |
+| `Level`       | Percentage | Fill/health levels     |
+| `Factor`      | Count      | Multipliers/counts     |
+| `Flow`        | L/h        | Liquid flow rates      |
+| `Current`     | Amps       | Current readings       |
 
 ## Quick Start
 
@@ -168,12 +176,12 @@ impl Drop for HardwareMonitor {
 
 ### Build Steps
 
-1. **Build xZenithHardwareMonitorLib first:**
+1. **Build LibreHardwareMonitorLib first:**
 
    ```
-   cd xZenithHardwareMonitorLib
-   Open xZenithHardwareMonitor.sln in Visual Studio
-   Build -> Build Solution (Release/Any CPU)
+   cd LibreHardwareMonitorLib
+   Open LibreHardwareMonitor.sln in Visual Studio
+   Build -> Build Solution (Release/x64)
    ```
 
 2. **Build xZenithHardwareMonitorAPI:**
@@ -182,6 +190,8 @@ impl Drop for HardwareMonitor {
    Open xZenithHardwareMonitorAPI.sln in Visual Studio
    Build -> Build Solution (Release/x64)
    ```
+   
+3. **Copy dependencies** from `LibreHardwareMonitorLib/bin/Release/x64/net472/` to API output directory.
 
 ### Output Files
 
@@ -191,8 +201,16 @@ Copy these files to your application directory:
 xZenithHardwareMonitorAPI/x64/Release/
 ├── ManagedxZenithHardwareMonitorWrapper.dll  (C API wrapper)
 ├── ManagedxZenithHardwareMonitor.dll         (Managed core)
-├── xZenithHardwareMonitorLib.dll             (Hardware monitoring library)
-└── Newtonsoft.Json.dll                       (JSON serialization)
+├── LibreHardwareMonitorLib.dll               (Hardware monitoring library)
+├── DiskInfoToolkit.dll                       (Storage monitoring)
+├── HidSharp.dll                              (HID device access)
+├── RAMSPDToolkit-NDD.dll                     (Memory SPD data)
+├── BlackSharp.Core.dll                       (Core utilities)
+├── Newtonsoft.Json.dll                       (JSON serialization)
+├── System.Memory.dll                         (Runtime dependency)
+├── System.Buffers.dll                        (Runtime dependency)
+├── System.Numerics.Vectors.dll               (Runtime dependency)
+└── System.Runtime.CompilerServices.Unsafe.dll (Runtime dependency)
 ```
 
 ## Project Structure
@@ -202,17 +220,21 @@ xZenithhardwareMonitor/
 ├── README.md                          # This file
 ├── LICENSE                            # Project license
 ├── CONTRIBUTING.md                    # Contribution guidelines
+├── docs/                              # Documentation
+│   ├── API_REFERENCE.md               # API reference
+│   ├── HARDWARE_TYPES.md              # Hardware and sensor types
+│   └── INTEGRATION_GUIDE.md           # Integration guide
 │
-├── xZenithHardwareMonitorLib/         # Core hardware monitoring library
-│   ├── xZenithHardwareMonitor.sln     # Solution file
-│   ├── xZenithHardwareMonitorLib/     # Library project
+├── LibreHardwareMonitorLib/           # Core hardware monitoring library
+│   ├── LibreHardwareMonitor.sln       # Solution file
+│   ├── LibreHardwareMonitorLib/       # Library project
 │   │   └── Hardware/                  # Hardware sensor implementations
 │   │       ├── Cpu/
 │   │       ├── Gpu/
 │   │       ├── Memory/
 │   │       ├── Storage/
 │   │       └── ...
-│   ├── xZenithHardwareMonitor/        # GUI application
+│   ├── LibreHardwareMonitor/          # GUI application
 │   ├── Aga.Controls/                  # UI controls
 │   └── Licenses/                      # Third-party licenses
 │
@@ -230,14 +252,18 @@ xZenithhardwareMonitor/
 
 ## Documentation
 
-- [xZenithHardwareMonitorAPI Documentation](./xZenithHardwareMonitorAPI/README.md) - API reference and usage examples
-- [xZenithHardwareMonitorLib Documentation](./xZenithHardwareMonitorLib/README.md) - Core library information
+- [API Reference](./docs/API_REFERENCE.md) - API functions and usage
+- [Hardware Types](./docs/HARDWARE_TYPES.md) - Supported hardware and sensors
+- [Integration Guide](./docs/INTEGRATION_GUIDE.md) - Step-by-step integration
 
 ## Acknowledgments
 
 This project builds upon excellent open-source work:
 
 - **[LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor)** - The foundation hardware monitoring library (MPL-2.0)
+- **[DiskInfoToolkit](https://github.com/)** - CrystalDiskInfo-level storage monitoring
+- **[RAMSPDToolkit](https://github.com/)** - Memory SPD/timing data access
+- **[HidSharp](https://github.com/IntergatedCircuits/HidSharp)** - HID device communication
 - **[corroded-monitor](https://github.com/chanderlud/corroded-monitor)** - Inspiration for Rust FFI integration patterns
 
 ## License
@@ -245,7 +271,7 @@ This project builds upon excellent open-source work:
 This project is dual-licensed:
 
 - **xZenithHardwareMonitorAPI** - MIT License
-- **xZenithHardwareMonitorLib** - Mozilla Public License 2.0 (MPL-2.0)
+- **LibreHardwareMonitorLib** - Mozilla Public License 2.0 (MPL-2.0)
 
 See the [LICENSE](LICENSE) file for details.
 

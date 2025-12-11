@@ -19,7 +19,15 @@ This guide covers integrating xZenithHardwareMonitorAPI with various programming
 
 ### Setup
 
-1. Copy DLLs to your Tauri project's resource directory
+1. Copy required DLLs to your Tauri project's resource directory:
+   - `ManagedxZenithHardwareMonitorWrapper.dll` (C API)
+   - `ManagedxZenithHardwareMonitor.dll` (Managed layer)
+   - `LibreHardwareMonitorLib.dll` (Core library)
+   - `Newtonsoft.Json.dll` (JSON serialization)
+   - `DiskInfoToolkit.dll` (Storage monitoring)
+   - `HidSharp.dll` (USB/HID device access)
+   - `RAMSPDToolkit-NDD.dll` (RAM SPD/DIMM info)
+   - System.* DLLs (if targeting systems without .NET Framework 4.7.2)
 2. Configure `tauri.conf.json` to bundle the DLLs
 3. Create Rust bindings
 
