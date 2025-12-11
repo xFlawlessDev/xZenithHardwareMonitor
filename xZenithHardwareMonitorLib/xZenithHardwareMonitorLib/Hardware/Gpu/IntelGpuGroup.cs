@@ -1,6 +1,7 @@
 ﻿// This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// Copyright (C) xZenithHardwareMonitor and Contributors.
+// Copyright (C) LibreHardwareMonitor and Contributors.
+// Ported to xZenithHardwareMonitor.
 // All Rights Reserved.
 
 using System;
@@ -8,6 +9,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using xZenithHardwareMonitor.Hardware.Cpu;
+using xZenithHardwareMonitor.Interop;
 
 namespace xZenithHardwareMonitor.Hardware.Gpu;
 
@@ -18,12 +20,81 @@ internal class IntelGpuGroup : IGroup
 
     public IntelGpuGroup(List<IntelCpu> intelCpus, ISettings settings)
     {
-        if (!Software.OperatingSystem.IsUnix && intelCpus?.Count > 0)
+        if (!Software.OperatingSystem.IsUnix)
         {
-            _report.AppendLine("Intel GPU (D3D)");
+            // Initialize Intel GCL for discrete GPUs (Intel Arc)
+            bool gclInitialized = false;
+
+            try
+            {
+                if (IntelGcl.IsAvailable)
+                {
+                    gclInitialized = IntelGcl.Initialize();
+                }
+            }
+            catch (Exception ex)
+            {
+                _report.Append("Intel GCL initialization failed: ");
+                _report.AppendLine(ex.Message);
+            }
+
+            _report.AppendLine("Intel GPU Detection");
+            _report.AppendLine();
+            _report.Append("Intel GCL Initialized: ");
+            _report.AppendLine(gclInitialized.ToString(CultureInfo.InvariantCulture));
             _report.AppendLine();
 
-            string[] ids = D3DDisplayDevice.GetDeviceIdentifiers();
+            // Enumerate discrete GPUs using Intel GCL
+            if (gclInitialized)
+            {
+                try
+                {
+                    var handles = IntelGcl.GetDeviceHandles();
+                    _report.Append("Device handles found: ");
+                    _report.AppendLine(handles.Length.ToString(CultureInfo.InvariantCulture));
+
+                    foreach (var handle in handles)
+                    {
+                        try
+                        {
+                            var gpu = new IntelDiscreteGpu(handle, settings);
+                            if (gpu.IsValid)
+                            {
+                                _report.Append("Discrete GPU: ");
+                                _report.AppendLine(gpu.Name);
+                                _report.Append("Device ID: ");
+                                _report.AppendLine(gpu.DeviceId);
+                                _report.AppendLine();
+
+                                _hardware.Add(gpu);
+                                _report.AppendLine("Successfully added discrete GPU to hardware list");
+                            }
+                            else
+                            {
+                                _report.AppendLine("Skipped invalid GPU device");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _report.Append("Failed to create IntelDiscreteGpu: ");
+                            _report.AppendLine(ex.Message);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _report.Append("Failed to enumerate Intel GPU devices: ");
+                    _report.AppendLine(ex.Message);
+                }
+            }
+
+            // Enumerate integrated GPUs using D3D (existing logic)
+            if (intelCpus?.Count > 0)
+            {
+                _report.AppendLine("Intel GPU (D3D - Integrated)");
+                _report.AppendLine();
+
+                string[] ids = D3DDisplayDevice.GetDeviceIdentifiers();
 
             _report.Append("Number of adapters: ");
             _report.AppendLine(ids.Length.ToString(CultureInfo.InvariantCulture));
@@ -67,6 +138,7 @@ internal class IntelGpuGroup : IGroup
                 }
 
                 _report.AppendLine();
+                }
             }
         }
     }
@@ -82,5 +154,18 @@ internal class IntelGpuGroup : IGroup
     {
         foreach (Hardware gpu in _hardware)
             gpu.Close();
+
+        // Shutdown Intel GCL
+        try
+        {
+            if (IntelGcl.IsInitialized)
+            {
+                IntelGcl.Cleanup();
+            }
+        }
+        catch
+        {
+            // Ignore shutdown errors
+        }
     }
 }

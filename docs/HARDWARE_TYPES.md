@@ -56,9 +56,9 @@ The CPU hardware type provides comprehensive processor monitoring for Intel and 
 
 | Sensor Type | Sensor Names | Unit | Description |
 |-------------|--------------|------|-------------|
-| `Temperature` | **Intel**: `CPU Package`, `CPU Core #1` - `#N`, `Core Max`, `Core Average`, `CPU Core #1 Distance to TjMax` - `#N Distance to TjMax`<br>**AMD**: `Core (Tctl)`, `Core (Tdie)`, `Core (Tctl/Tdie)`, `CCD1 (Tdie)` - `CCD8 (Tdie)`, `CCDs Max (Tdie)`, `CCDs Average (Tdie)` | C | Core and package temperatures |
-| `Load` | `CPU Total`, `CPU Core #1` - `#N`, `CPU Core Max`, `CPU Core #1 Thread #1`, `CPU Core #1 Thread #2` | % | Utilization per core/thread and total |
-| `Clock` | `CPU Core #1` - `#N`, `Bus Speed` | MHz | Operating frequencies |
+| `Temperature` | **Intel**: `CPU Package`, `CPU Core #1` - `#N` (or `P-Core #1` - `#N`, `E-Core #1` - `#N` for hybrid CPUs), `Core Max`, `Core Average`, `CPU Core #1 Distance to TjMax` - `#N Distance to TjMax`<br>**AMD**: `Core (Tctl)`, `Core (Tdie)`, `Core (Tctl/Tdie)`, `CCD1 (Tdie)` - `CCD8 (Tdie)`, `CCDs Max (Tdie)`, `CCDs Average (Tdie)` | C | Core and package temperatures |
+| `Load` | `CPU Total`, `CPU Core #1` - `#N` (or `P-Core #1` - `#N`, `E-Core #1` - `#N`), `CPU Core Max`, `CPU Core #1 Thread #1`, `CPU Core #1 Thread #2` | % | Utilization per core/thread and total |
+| `Clock` | `CPU Core #1` - `#N` (or `P-Core #1` - `#N`, `E-Core #1` - `#N`), `Bus Speed` | MHz | Operating frequencies |
 | `Power` | **Intel**: `CPU Package`, `CPU Cores`, `CPU Graphics`, `CPU Memory`, `CPU Platform`<br>**AMD**: `Package` (plus SMU sensors if available) | W | Power consumption |
 | `Voltage` | **Intel**: `CPU Core`, `CPU Core #1` - `#N` (VID readings)<br>**AMD**: `Core (SVI2 TFN)`, `SoC (SVI2 TFN)` (plus SMU sensors if available) | V | Core voltages |
 
@@ -541,9 +541,15 @@ AMD graphics cards monitoring through ADL/ADLX.
 
 ### GPU - Intel (GpuIntel)
 
-Intel integrated and discrete graphics monitoring.
+Intel integrated and discrete graphics monitoring. Supports both Intel UHD/Iris integrated GPUs and Intel Arc discrete GPUs.
+
+#### Intel Arc Discrete GPU Support
+
+Intel Arc GPUs (A380, A580, A750, A770, etc.) are supported via the Intel Graphics Control Library (GCL). Requires Intel GPU drivers with ControlLib.dll.
 
 #### Available Sensors
+
+**Integrated GPU (Intel UHD/Iris):**
 
 | Sensor Type | Sensor Names | Unit | Description |
 |-------------|--------------|------|-------------|
@@ -553,7 +559,20 @@ Intel integrated and discrete graphics monitoring.
 | `Power` | `GPU Power`, `GPU Package` | W | Power consumption |
 | `SmallData` | `D3D Dedicated Memory Used`, `D3D Shared Memory Used`, `D3D Shared Memory Free`, `D3D Shared Memory Total` | MB | Memory usage |
 
-#### JSON Example
+**Discrete GPU (Intel Arc):**
+
+| Sensor Type | Sensor Names | Unit | Description |
+|-------------|--------------|------|-------------|
+| `Temperature` | `GPU Core`, `GPU Memory` | C | GPU and VRAM temperatures |
+| `Load` | `GPU Core`, `GPU Render/Compute`, `GPU Media` | % | Utilization metrics |
+| `Clock` | `GPU Core`, `GPU Memory` | MHz | Clock speeds |
+| `Power` | `GPU Package`, `GPU Total` | W | Power consumption |
+| `Voltage` | `GPU Core`, `GPU Memory` | V | Voltage readings |
+| `Fan` | `GPU Fan`, `GPU Fan 1`, `GPU Fan 2` | RPM | Fan speeds |
+| `SmallData` | `GPU Memory Used`, `GPU Memory Free`, `GPU Memory Total` | MB | VRAM usage |
+| `Throughput` | `GPU Memory Read`, `GPU Memory Write` | B/s | Memory bandwidth |
+
+#### JSON Example (Integrated GPU)
 
 ```json
 {
@@ -615,6 +634,146 @@ Intel integrated and discrete graphics monitoring.
       "Value": 8.5,
       "Min": 2.0,
       "Max": 15.0
+    }
+  ],
+  "SubHardware": []
+}
+```
+
+#### JSON Example (Intel Arc Discrete GPU)
+
+```json
+{
+  "HardwareType": "GpuIntel",
+  "Name": "Intel Arc A770",
+  "Sensors": [
+    {
+      "SensorType": "Temperature",
+      "Name": "GPU Core",
+      "Index": 0,
+      "Value": 55.0,
+      "Min": 32.0,
+      "Max": 78.0
+    },
+    {
+      "SensorType": "Temperature",
+      "Name": "GPU Memory",
+      "Index": 1,
+      "Value": 52.0,
+      "Min": 30.0,
+      "Max": 72.0
+    },
+    {
+      "SensorType": "Clock",
+      "Name": "GPU Core",
+      "Index": 0,
+      "Value": 2100.0,
+      "Min": 300.0,
+      "Max": 2400.0
+    },
+    {
+      "SensorType": "Clock",
+      "Name": "GPU Memory",
+      "Index": 1,
+      "Value": 2187.5,
+      "Min": 625.0,
+      "Max": 2187.5
+    },
+    {
+      "SensorType": "Load",
+      "Name": "GPU Core",
+      "Index": 0,
+      "Value": 65.0,
+      "Min": 0.0,
+      "Max": 100.0
+    },
+    {
+      "SensorType": "Load",
+      "Name": "GPU Render/Compute",
+      "Index": 1,
+      "Value": 58.0,
+      "Min": 0.0,
+      "Max": 100.0
+    },
+    {
+      "SensorType": "Load",
+      "Name": "GPU Media",
+      "Index": 2,
+      "Value": 5.0,
+      "Min": 0.0,
+      "Max": 45.0
+    },
+    {
+      "SensorType": "Power",
+      "Name": "GPU Package",
+      "Index": 0,
+      "Value": 185.0,
+      "Min": 15.0,
+      "Max": 225.0
+    },
+    {
+      "SensorType": "Power",
+      "Name": "GPU Total",
+      "Index": 1,
+      "Value": 210.0,
+      "Min": 20.0,
+      "Max": 275.0
+    },
+    {
+      "SensorType": "Voltage",
+      "Name": "GPU Core",
+      "Index": 0,
+      "Value": 1.05,
+      "Min": 0.65,
+      "Max": 1.15
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "GPU Memory Used",
+      "Index": 1,
+      "Value": 8192.0,
+      "Min": 256.0,
+      "Max": 15360.0
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "GPU Memory Free",
+      "Index": 0,
+      "Value": 8192.0,
+      "Min": 1024.0,
+      "Max": 16128.0
+    },
+    {
+      "SensorType": "SmallData",
+      "Name": "GPU Memory Total",
+      "Index": 2,
+      "Value": 16384.0,
+      "Min": 16384.0,
+      "Max": 16384.0
+    },
+    {
+      "SensorType": "Fan",
+      "Name": "GPU Fan",
+      "Index": 0,
+      "Value": 1800.0,
+      "Min": 0.0,
+      "Max": 2800.0
+    },
+    {
+      "SensorType": "Throughput",
+      "Name": "GPU Memory Read",
+      "Index": 0,
+      "Value": 25769803776.0,
+      "Min": 0.0,
+      "Max": 560000000000.0
+    },
+    {
+      "SensorType": "Throughput",
+      "Name": "GPU Memory Write",
+      "Index": 1,
+      "Value": 17179869184.0,
+      "Min": 0.0,
+      "Max": 560000000000.0
     }
   ],
   "SubHardware": []
